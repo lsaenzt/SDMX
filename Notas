@@ -1,0 +1,13 @@
+Las queries para cada DataFlow van seguidos por los valores de las dimensiones separados por puntos. 
+Si se quiere obviar una dimensión se deja en blanco
+La respuesta incluye: 
+    header: datos generales de la query
+    dataSets: los datos de las observaciones con la siguientes estructura anidada (para TimeSeries):
+        Categorías de dimensiones : String separado por : con el índice de la DIMENSIÓN de la SERIE correspondiente
+            Atributos: Vector con los valores de cada ATRIBUTO del SERIE
+            Observaciones: Diccionario con "ind => vector" con el índice del vector de fechas y el array con atributos de la observación (includo valor)
+    structure: incluye los valores para los índices en dataSets:
+        - Dimensiones (series y observaciones)
+        - Atributos (series y observaciones)
+
+NOTA: Pensar si es mejor solicitar los datos como "AllDimensions" para que no agrupe las observaciones por fechas -> Sí

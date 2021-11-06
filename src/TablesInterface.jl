@@ -14,7 +14,8 @@ Tables.istable(::Type{<:SDMXdata}) = true
 # getter methods to avoud getproperty clash
 headers(sd::SDMXdata) = getfield(sd, :headers)
 data(sd::SDMXdata) = getfield(sd, :data)
+dimensions(sd::SDMXdata) = getfield(ds, :dimensions)
 
-# Tables.rows implementation
+# Tables.rows implementation. Fallback definitions are valid
 Tables.rowaccess(::Type{<:SDMXdata}) = true
 Tables.rows(sd::SDMXdata) = data(sd)
