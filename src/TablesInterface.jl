@@ -6,7 +6,7 @@ struct SDMXdata
     dimensions::Dict{String,Vector{String}}
 end
 
-Base.show(io::IO,sd::SDMXdata) = print(io,@pt sd)
+Base.show(io::IO,sd::SDMXdata) = pretty_tables(sd)
 
 # Declare that SDMXdata is a table
 
