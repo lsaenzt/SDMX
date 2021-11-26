@@ -15,12 +15,13 @@ function dataflows()
     HTTP.get(SMDX_API_url*"dataflow").body    
 end
 
-HTTP.get("https://sdw-wsrest.ecb.europa.eu/service/datastructure/ECB?references=dataflow")
-
 # Download dataflows
 function downloaddataflow(dtflow::String;startPeriod::Date)
         HTTP.get(SMDX_API_url*"data/"*dtflow)
 end
+
+HTTP.get("https://sdw-wsrest.ecb.europa.eu/service/datastructure/ECB/ECB_CBD2?references=children")
+
 
 #--------------------------------------------------------------------
 # Basic Data download
@@ -38,8 +39,11 @@ end
 # Working example
 #--------------------------------------------------------------------
 
+# Data Structure
+ds = HTTP.get(SMDX_API_url*"data/CBD2?detail=serieskeysonly&lastNObservations=1&format=jsondata").body
+
 # Balance Sheet
-HTTP.get(SMDX_API_url*"data/CBD2/Q.IE.W0.67._Z._Z.A.F.._X..._Z.LE._T.EUR?startPeriod=2014&format=jsondata")
+HTTP.get(SMDX_API_url*"data/CBD2/Q.IE.W0.67._Z._Z.A.F.._X..._Z.LE._T.EUR?startPeriod=2014&format=jsondata").body
 
 # P&L Bank of Ireland
 resp = HTTP.get(SMDX_API_url*"data/CBD2/Q.IE.W0.67._Z._Z.A.F.._X.ALL.._Z.T._T.EUR?startPeriod=2014&dimensionAtObservation=AllDimensions&format=jsondata")
