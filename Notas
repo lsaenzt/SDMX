@@ -1,11 +1,25 @@
-Las queries para cada DataFlow van seguidos por los valores de las dimensiones separados por puntos. 
-Si se quiere obviar una dimensión se deja en blanco
-La respuesta incluye: 
-    header: datos generales de la query
-    dataSets: los datos de las observaciones con la siguientes estructura anidada (para TimeSeries):
-        Categorías de dimensiones : String separado por : con el índice de la DIMENSIÓN de la SERIE correspondiente
-            Atributos: Vector con los valores de cada ATRIBUTO de la SERIE
-            Observaciones: Diccionario con "ind => vector" con el índice del vector de fechas y el array con atributos de la observación (includo valor)
-    structure: incluye los valores para los índices en dataSets:
-        - Dimensions (series y observaciones)
-        - Attributes (series y observaciones)
+SDMX base structure
+
+header :    - id::String
+            - test::Bool
+            - prepared::String # Date
+            - sender::Dict
+
+dataSets::Vector :  - action::String
+                    - validFrom::String # Date
+                oneof
+                    - observations::Dict # if flat file
+                    or
+                    - series::Dict : # if series file
+                        - attributes
+                        - observations
+strucuture: - links::Vector
+            - name::String
+            - dimensiones::Dict
+                oneof
+                - observation  # if flat file
+                or
+                - series # if series file
+                - observation
+            - attributes::Dict
+        

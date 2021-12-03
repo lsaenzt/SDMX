@@ -7,8 +7,8 @@ const BS = "Q.IE.W0.67._Z._Z.A.F.._X..._Z.LE._T.EUR"
 const PL = "Q.IE.W0.67._Z._Z.A.F.._X.ALL.._Z.T._T.EUR"
 
 io = IOBuffer()
-flat = Downloads.download(ecb_url*"data/"*flowref*BS*"?startPeriod=2020&format=jsondata", io) |> take!
-series = Downloads.download(ecb_url*"data/"*flowref*BS*"?startPeriod=2020&dimensionAtObservation=AllDimensions&format=jsondata", io) |> take!
+flat = Downloads.download(ecb_url*"data/"*flowref*BS*"?startPeriod=2020&dimensionAtObservation=AllDimensions&format=jsondata", io) |> take!
+series = Downloads.download(ecb_url*"data/"*flowref*BS*"?startPeriod=2020&format=jsondata", io) |> take!
 
 dt_flat = SDMX.read(flat)
 dt_series = SDMX.read(series)
