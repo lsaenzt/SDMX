@@ -1,87 +1,157 @@
+module SDMX
 # Interface for downloading data from ECB SDMX 2.1 RESTfut API
+using HTTP, JSON3, Dates, StructTypes, OrderedCollections
+using Tables, PrettyTables
 
-using HTTP, JSON3
+include("./TablesInterface.jl")
 
-# url for ECB data
-const SMDX_API_url="https://sdw-wsrest.ecb.europa.eu/service/"
+mutable struct Header
+    id::String
+    test::Bool
+    prepared::String # Change to Date
+    sender
 
-include("TablesInterface.jl")
-
-# flowRef/key?parameters
-# startPeriod=value&endPeriod=value&updatedAfter=value&firstNObservations=value&lastNObservations=value&detail=value&includeHistory=value
-
-# Get dataflows. Response in xml...
-function dataflows()
-    HTTP.get(SMDX_API_url*"dataflow").body    
+    Header() = new()
 end
 
-# Download dataflows
-function downloaddataflow(dtflow::String;startPeriod::Date)
-        HTTP.get(SMDX_API_url*"data/"*dtflow)
+# Note: loading in data here changes order of data. RETHINK
+mutable struct DataSet
+    action::String
+    validfrom::String # Change to Date
+    # For timeseries
+    observation   
+    series
+    # For flat file
+    observations
+
+    DataSet() = new()
 end
 
-HTTP.get("https://sdw-wsrest.ecb.europa.eu/service/datastructure/ECB/ECB_CBD2?references=children")
+mutable struct Structure
+    links
+    name::String
+    dimensions
+    attributes
+    
+    Structure() = new()
+end
 
+mutable struct Data
+    header::Header
+    dataSets::Vector{DataSet}
+    structure::Structure
+
+    Data() = new()
+end
+
+StructTypes.StructType(::Type{Data}) = StructTypes.Mutable()
+StructTypes.StructType(::Type{DataSet}) = StructTypes.Mutable()
+StructTypes.StructType(::Type{Header}) = StructTypes.Mutable()
+StructTypes.StructType(::Type{Structure}) = StructTypes.Mutable()
+
+#--------------------------------------------------------------------
+# Metadata info: dimensions
+#--------------------------------------------------------------------
+
+function listdimensions(apiurl::String, dataflow::String)
+
+    resp = HTTP.get(apiurl*"data/"*dataflow*"?detail=serieskeysonly&lastNObservations=1&format=jsondata").body
+
+    ds = JSON3.read(resp).structure.dimensions.series
+
+    dim = OrderedDict()
+
+    for dsᵢ in ds
+        dim[dsᵢ.name] = NamedTuple(Symbol(j.id) => j.name for j in dsᵢ.values) 
+    end
+
+    dim
+end
 
 #--------------------------------------------------------------------
 # Basic Data download
 #--------------------------------------------------------------------
 
-function getseries(apiurl::String, database::string, dimensions::Dict{Symbol, String})
+function getseries(apiurl::String, database::String, keys::Dict{Symbol, String};
+                 dimensionAtObservation="AllDimensionsdetail")
  
-    query = join(values(dimensions),".") # TODO: Deal with several values (ie. ES+PT+IE)
-
-    url = apiurl*database*query
-    
+    query = join(values(keys),".") # TODO: Deal with several values (ie. ES+PT+IE)
+    return HTTP.get(apiurl*database*query).body |> JSON3.read(SMDX.Data)    
 end
 
 #--------------------------------------------------------------------
-# Working example
+# Datatable generation
 #--------------------------------------------------------------------
 
-# Data Structure
-ds = HTTP.get(SMDX_API_url*"data/CBD2?detail=serieskeysonly&lastNObservations=1&format=jsondata").body
+function read(js::Union{Vector{UInt8},String}; alldims=true)
 
-# Balance Sheet
-HTTP.get(SMDX_API_url*"data/CBD2/Q.IE.W0.67._Z._Z.A.F.._X..._Z.LE._T.EUR?startPeriod=2014&format=jsondata").body
+    ds = JSON3.read(js, Data)
 
-# P&L Bank of Ireland
-resp = HTTP.get(SMDX_API_url*"data/CBD2/Q.IE.W0.67._Z._Z.A.F.._X.ALL.._Z.T._T.EUR?startPeriod=2014&dimensionAtObservation=AllDimensions&format=jsondata")
-js = JSON3.read(resp.body)
+    dims_all = OrderedDict() # Collects info of all dimensions before filtering if alldims
+    for v in values(ds.structure.dimensions)
+        for i in v
+            dims_all[i["name"]] = [j["name"] for j in i["values"]]
+        end
+    end
+      
+    dims = ds.structure.dimensions # Collects 'Series' (if any) and 'Observations'
 
-function getseries(js::JSON3.Object)
-
-    dimlength = [length(i.values) for i in js.structure.dimensions.observation] # Number of possible values in each dimension
-
-    mask = dimlength .> 1 # Only including dimensions with more than 1 attribute
+    mask = Dict()
+    for (k,v) in dims
+        if alldims == false
+            mask[k] = Colon()
+        else
+            m = [(length(i["values"])>1) | (haskey(i,"role")) for i in v] .== true # BitVector vector for filtering
+            dims[k] = v[m]
+            mask[k] = m
+        end
+    end
 
     # Headers vector
-    headers = Vector{Symbol}()    
-    for i in js.structure.dimensions.observation[mask]
-        push!(headers, Symbol(i.name))
+    headers = Vector{Symbol}() 
+    for v in values(dims)
+        for i in v
+            push!(headers, Symbol(i["name"]))
+        end
     end
     push!(headers,:Value)
 
-    # Rows of observations    
+    # Rows of observations
     obs=[]
-    for (k,v) in js.dataSets[1].observations
-    dims = parse.(Int,split(string(k),":")).+1 #Transforms dimension into a 1-index Array
-    dimdesc = Vector{String}(undef,length(dims))
-
-        for i in 1:length(dims)
-            dimdesc[i]=js.structure.dimensions.observation[i].values[dims[i]].name
+    if haskey(dims,"series")
+        
+        for (kₛ,vₛ) in ds.dataSets[1].series
+          serieskey = parse.(Int,split(string(kₛ),":")).+1 #Transforms dimension into a 1-index Array
+          serieskey = serieskey[mask["series"]] # Filters descriptive dimensions if alldims=false
+          dimdesc = Vector{String}(undef,length(serieskey))
+          for (i,n) in enumerate(serieskey)
+            dimdesc[i] = dims["series"][i]["values"][n]["name"]
+          end
+          for (kₒ,vₒ) in vₛ["observations"]
+            obsdim = dims["observation"][1]["values"][parse(Int,kₒ)+1]["name"]
+            dimvalues = [dimdesc...,obsdim]
+            row = [dimvalues...,vₒ[1]]
+            push!(obs,(;zip(headers,row)...))
+          end
         end
 
-    value = v[1]
-    push!(obs,(;zip(headers,[dimdesc[mask]...,value])...))  # Rows as Nametuples for Tables.jl
+    else         
+        for (k,v) in ds.dataSets[1].observations
+            dimkey = parse.(Int,split(string(k),":")).+1 # Transforms dimension into a 1-index Array
+            dimkey = dimkey[mask["observation"]]
+            dimdesc = Vector{String}(undef,length(dimkey))
+                for (i,n) in enumerate(dimkey)
+                    dimdesc[i]=   dims["observation"][i]["values"][n]["name"]
+                end
+            value = v[1]
+            push!(obs,(;zip(headers,[dimdesc...,value])...))  # Rows as Nametuples for Tables.jl
+        end
     end
 
-    # Get all dimensions
-    alldims = Dict{String,Vector{String}}()
-
-    for i in js.structure.dimensions.observation
-        alldims[i["name"]] = [v["name"] for v in i.values]
-    end
-
-    SDMXdata(headers,obs,alldims) # Including headers, observation and all dimensions data
+    datatable(ds.structure.name, 
+              headers,
+              obs,
+              dims_all) # Including headers, observation and all dimensions data
 end
+
+end #Module
