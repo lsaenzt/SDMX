@@ -1,4 +1,4 @@
-SDMX base structure
+SDMX basic structure
 
 header :    - id::String
             - test::Bool

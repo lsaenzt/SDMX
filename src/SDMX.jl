@@ -1,6 +1,6 @@
 module SDMX
 
-using HTTP, JSON3, OrderedCollections
+using JSON3, OrderedCollections
 using Tables, PrettyTables
 export headers, dimensions
 #--------------------------------------------------------------------
