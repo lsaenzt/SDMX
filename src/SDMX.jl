@@ -45,6 +45,20 @@ end
 # Datatable generation
 #--------------------------------------------------------------------
 
+"""
+    SDMX.read(js::Union{Vector{UInt8},String}; alldims::Bool = true)
+
+Constructs SDMX.datatable compatible with Tables.jl
+
+If 'alldims' is set to false only dimensions with more than one value or a specific role are included.
+
+# Example
+```julia  
+    HTTP.get("https://dataurl").body |> SDMX.read
+```
+
+"""
+
 function read(js::Union{Vector{UInt8},String}; alldims=true)
 
     ds = JSON3.read(js)
