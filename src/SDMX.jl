@@ -2,11 +2,12 @@ module SDMX
 
 using HTTP, JSON3, OrderedCollections
 using Tables, PrettyTables
+export headers, dimensions
 #--------------------------------------------------------------------
 # Tables.jl implementation
 #--------------------------------------------------------------------
 
-struct Datatable
+struct Datatable <:Tables.AbstractRow
     name::String
     headers::Vector{Symbol}
     data::Vector{Any}
@@ -17,16 +18,19 @@ end
 Tables.istable(::Type{<:Datatable}) = true
 
 # getter methods to avoud getproperty clash
-name(sd::Datatable) = getfield(sd, :name)
-headers(sd::Datatable) = getfield(sd, :headers)
-data(sd::Datatable) = getfield(sd, :data)
-dimensions(sd::Datatable) = getfield(sd, :dimensions)
+name(dt::Datatable) = getfield(dt, :name)
+headers(dt::Datatable) = getfield(dt, :headers)
+data(dt::Datatable) = getfield(dt, :data)
+dimensions(dt::Datatable) = getfield(dt, :dimensions)
 
 # Tables.rows implementation. Fallback definitions are valid
 Tables.rowaccess(::Type{<:Datatable}) = true
-Tables.rows(sd::Datatable) = data(sd)
+Tables.rows(dt::Datatable) = data(dt)
 
-# TODO: Complete Abstractrow interface
+# Complete Abstractrow interface
+Tables.getcolumn(dt::Datatable, i::Int) = [row[i] for row in data(dt)]
+Tables.getcolumn(dt::Datatable, nm::Symbol) = [row[nm] for row in data(dt)]	
+Tables.columnnames(dt::Datatable) = headers(dt)
 
 #--------------------------------------------------------------------
 # Datatable prettyprinting
