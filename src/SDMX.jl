@@ -2,7 +2,6 @@ module SDMX
 
 using JSON3, OrderedCollections
 using Tables, PrettyTables
-export headers, dimensions
 #--------------------------------------------------------------------
 # Tables.jl implementation
 #--------------------------------------------------------------------
