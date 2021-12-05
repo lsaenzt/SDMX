@@ -30,5 +30,5 @@ function getseries(apiurl::String, database::String, keys::Dict{Symbol, String};
  
     query = join(values(keys),".") # TODO: Deal with several values (ie. ES+PT+IE)
     io=IOBuffer()
-    return Downloads.download(apiurl*database*query,io) |> take! |> JSON3.read(SMDX.Data)    
+    return Downloads.download(apiurl*database*query,io) |> take! |> SDMX.read(alldims=false)   
 end
