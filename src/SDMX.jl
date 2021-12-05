@@ -63,9 +63,9 @@ function read(js::Union{Vector{UInt8},String}; alldims=true)
 
     ds = JSON3.read(js)
 
-    dims = OrderedDict() # Collects 'Series' (if any) and 'Observations'
+    # Dimensions to include in Datatable
+    dims = OrderedDict() # Collects 'Series' (if any) and 'Observations' dimensions    
     mask = Dict()
-
     for (k,v) in ds.structure.dimensions
         if alldims
             dims[k] = v
@@ -77,7 +77,7 @@ function read(js::Union{Vector{UInt8},String}; alldims=true)
         end
     end
 
-    # Headers vector
+    # Headers
     headers = Vector{Symbol}() 
     for v in values(dims)
         for i in v
@@ -108,7 +108,7 @@ function read(js::Union{Vector{UInt8},String}; alldims=true)
     else         
         for (k,v) in ds.dataSets[1].observations
             dimkey = parse.(Int,split(string(k),":")).+1 # Transforms dimension into a 1-index Array
-            dimkey = dimkey[mask[:observation]]
+            dimkey = dimkey[mask[:observation]] # Filters descriptive dimensions if alldims=false
             dimdesc = Vector{String}(undef,length(dimkey))
                 for (i,n) in enumerate(dimkey)
                     dimdesc[i]=   dims[:observation][i]["values"][n]["name"]
